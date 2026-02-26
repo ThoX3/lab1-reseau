@@ -1,0 +1,5 @@
+GodotPP/build/
+
+**/build/
+*.lib
+*.exe

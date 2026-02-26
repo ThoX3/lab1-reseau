@@ -1,0 +1,4 @@
+language = "C"
+cpp_compat = true
+include_guard = "SNL_LIB_H"
+style = "tag"
