@@ -7,6 +7,8 @@
 #include <map>
 #include <functional>
 
+#include "../../protocol.h"
+
 extern "C" {
     void* net_socket_create(const char* bind_addr);
     void net_socket_destroy(void* socket_ptr);
@@ -27,6 +29,9 @@ private:
 
     using CreatorLambda = std::function<Node2D*()>;
     std::map<uint32_t, CreatorLambda> type_registry;
+
+    uint32_t current_sequence = 1; 
+    InputHistoryPacket input_history = {};
 
 protected:
     static void _bind_methods();
