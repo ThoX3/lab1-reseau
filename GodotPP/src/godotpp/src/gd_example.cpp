@@ -112,7 +112,7 @@ void GDExample::_physics_process(double delta) {
     uint8_t buf[1024];
     char sender[64];
     
-   while (true) {
+    while (true) {
         int bytes = net_socket_poll(network_socket, buf, 1024, sender, 64);
         if (bytes <= 0) break; 
 

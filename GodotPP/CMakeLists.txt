@@ -5,20 +5,25 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Configuration ---
+# On déclare le dossier normal ET le dossier de triche
 set(GODOT_PROJECT_DIR "${CMAKE_SOURCE_DIR}/game")
+set(GODOT_CHEAT_DIR "${CMAKE_SOURCE_DIR}/game_cheat")
 set(GODOT_VERSION "4.6-stable")
 set(GODOT_CACHE_DIR "${CMAKE_SOURCE_DIR}/.godot_bin")
 
-# Detect Godot Binary Path
+# Detect Godot Binary Path (On ajoute les chemins OUTPUT pour le cheat)
 if(APPLE)
     set(GODOT_EXECUTABLE "${GODOT_CACHE_DIR}/Godot.app/Contents/MacOS/Godot")
     set(GODOT_OUTPUT_DIR "${GODOT_PROJECT_DIR}/bin/macos/arm64")
+    set(GODOT_CHEAT_OUTPUT_DIR "${GODOT_CHEAT_DIR}/bin/macos/arm64")
 elseif(WIN32)
     set(GODOT_EXECUTABLE "${GODOT_CACHE_DIR}/Godot_v${GODOT_VERSION}_win64.exe")
     set(GODOT_OUTPUT_DIR "${GODOT_PROJECT_DIR}/bin/windows")
+    set(GODOT_CHEAT_OUTPUT_DIR "${GODOT_CHEAT_DIR}/bin/windows")
 else()
     set(GODOT_EXECUTABLE "${GODOT_CACHE_DIR}/Godot_v${GODOT_VERSION}_linux.x86_64")
     set(GODOT_OUTPUT_DIR "${GODOT_PROJECT_DIR}/bin/linux")
+    set(GODOT_CHEAT_OUTPUT_DIR "${GODOT_CHEAT_DIR}/bin/linux")
 endif()
 
 add_subdirectory(externals)
@@ -33,7 +38,7 @@ add_custom_target(setup
         COMMENT "Checking/Downloading Godot Engine..."
 )
 
-# Target: editor (Launches Godot Editor)
+# Target: editor (Launches Godot Editor sur le jeu sain)
 add_custom_target(editor
         COMMAND ${GODOT_EXECUTABLE} -e --path "${GODOT_PROJECT_DIR}"
         DEPENDS setup GodotPP
@@ -41,16 +46,25 @@ add_custom_target(editor
         USES_TERMINAL
 )
 
-# Target: play (Launches the Game)
+# ==============================================================
+# Target: play (Lance le client SAIN)
 add_custom_target(play
         COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_PROJECT_DIR}"
         DEPENDS setup GodotPP
-        COMMENT "Launching Game..."
+        COMMENT "Launching Game (NORMAL)..."
         USES_TERMINAL
 )
 
-# Target: package (Exports the Game - Simple Example)
-# Note: You need an export_presets.cfg in your godot project for this to work
+# Target: cheat (Lance le client HACKER sur le clone)
+add_custom_target(cheat
+        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_CHEAT_DIR}"
+        DEPENDS setup GodotPP_Cheat
+        COMMENT "Launching Game (CHEATER)..."
+        USES_TERMINAL
+)
+# ==============================================================
+
+# Target: package (Exports the Game)
 if(WIN32)
     set(GODOT_EXPORT_PRESET "Windows Desktop")
     set(GODOT_EXPORT_OUTPUT "${CMAKE_BINARY_DIR}/build/game.exe")
@@ -62,15 +76,10 @@ else() # Linux
     set(GODOT_EXPORT_OUTPUT "${CMAKE_BINARY_DIR}/build/game.x86_64")
 endif()
 
-# Target: package (Cross-Platform)
 add_custom_target(package
-        # 1. Ensure the output directory exists
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/build"
-
-        # 2. Run the export with platform-aware variables
         COMMAND ${GODOT_EXECUTABLE} --headless --path "${GODOT_PROJECT_DIR}"
         --export-release "${GODOT_EXPORT_PRESET}" "${GODOT_EXPORT_OUTPUT}"
-
         DEPENDS setup GodotPP
         COMMENT "Packaging Game for ${GODOT_EXPORT_PRESET} to ${GODOT_EXPORT_OUTPUT}..."
 )
