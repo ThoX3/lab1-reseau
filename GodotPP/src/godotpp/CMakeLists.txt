@@ -15,10 +15,16 @@ target_link_libraries(GodotPP PRIVATE
 )
 
 add_custom_command(TARGET GodotPP POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${GODOT_OUTPUT_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GodotPP>" "${GODOT_OUTPUT_DIR}/$<TARGET_FILE_NAME:GodotPP>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/godotpp.gdextension.in" "${GODOT_PROJECT_DIR}/godotpp.gdextension"
-    COMMENT "Installing NORMAL GDExtension to ${GODOT_OUTPUT_DIR}..."
+        # Copy the binary to the Godot project bin/ folder
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${GODOT_OUTPUT_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GodotPP>" "${GODOT_OUTPUT_DIR}"
+
+        # BGenerate the .gdextension file from template
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/godotpp.gdextension.in"
+        "${GODOT_PROJECT_DIR}/godotpp.gdextension"
+
+        COMMENT "Installing GDExtension to ${GODOT_OUTPUT_DIR}..."
 )
 
 # ==============================================================================
@@ -38,10 +44,17 @@ target_link_libraries(GodotPP_Cheat PRIVATE
 )
 
 add_custom_command(TARGET GodotPP_Cheat POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${GODOT_PROJECT_DIR}" "${GODOT_CHEAT_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${GODOT_CHEAT_OUTPUT_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:GodotPP_Cheat>" "${GODOT_CHEAT_OUTPUT_DIR}/GodotPP.dll"
+        # 1. On clone complètement le dossier 'game' vers 'game_cheat'
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${GODOT_PROJECT_DIR}" "${GODOT_CHEAT_DIR}"
 
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/godotpp.gdextension.in" "${GODOT_CHEAT_DIR}/godotpp.gdextension"
-    COMMENT "Clonage du jeu et installation du CHEAT dans ${GODOT_CHEAT_DIR}..."
+        # 2. On s'assure que le dossier bin du clone existe
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${GODOT_CHEAT_OUTPUT_DIR}"
+
+        # 3. L'INJECTION : On copie le cheat dans le clone en le renommant 'GodotPP.dll'
+        COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:GodotPP_Cheat>" "${GODOT_CHEAT_OUTPUT_DIR}/GodotPP.dll"
+
+        # 4. On génère le fichier de registre Godot pour le clone
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/godotpp.gdextension.in" "${GODOT_CHEAT_DIR}/godotpp.gdextension"
+
+        COMMENT "Clonage du jeu et installation du CHEAT dans ${GODOT_CHEAT_DIR}..."
 )

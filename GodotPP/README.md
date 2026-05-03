@@ -16,19 +16,28 @@ This project features a "Superbuild" workflow designed for education, allowing s
 ### Initial Setup
 Clone the repository (including submodules) and run the setup to download the Godot Engine binary:
 
-```bash
 # Configure the project
-cmake -S . -B build
+```bash
+cmake -S . -B build `
+  "-DCMAKE_TOOLCHAIN_FILE=D:/lab1-reseau/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+  -DVCPKG_MANIFEST_MODE=ON `
+  -DVCPKG_TARGET_TRIPLET=x64-windows
+```
 
 # Download the Godot Engine binary
+```bash
 cmake --build build --target setup
 ```
+
 ### Development Workflow
 
 The build system handles the Rust compilation, header generation via cbindgen, and C++ linking automatically.
 - Build everything: `cmake --build build`
 - Launch Godot Editor: `cmake --build build --target editor`
 - Run the Game: `cmake --build build --target play`
+- Run the Cheat: `cmake --build build --target cheat`
+- Run the Server: `cmake --build build --target GodotPPServer`
+
 
 ## 🛠 Project Architecture
 

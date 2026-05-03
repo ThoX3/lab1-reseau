@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
+
+if(NOT CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "D:/lab1-reseau/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
+
 project(GodotPP LANGUAGES CXX)
 
 find_package(OpenSSL REQUIRED)
@@ -48,31 +53,25 @@ add_custom_target(editor
 )
 
 # ==============================================================
-# Target: play (Lance le client SAIN)
+
+# --- CIBLE PLAY ---
 add_custom_target(play
-        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_PROJECT_DIR}" --headless --quit
-        WORKING_DIRECTORY "${GODOT_PROJECT_DIR}"
-
+        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_PROJECT_DIR}" --editor --headless --quit || ${CMAKE_COMMAND} -E echo "Importation initiale terminee."
         COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_PROJECT_DIR}"
-        WORKING_DIRECTORY "${GODOT_PROJECT_DIR}"
-
         DEPENDS setup GodotPP
-        COMMENT "Launching Game (NORMAL)..."
+        COMMENT "Launching Game..."
         USES_TERMINAL
 )
 
-# Target: cheat (Lance le client HACKER sur le clone)
+# --- CIBLE CHEAT ---
 add_custom_target(cheat
-        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_CHEAT_DIR}" --headless --quit
-        WORKING_DIRECTORY "${GODOT_CHEAT_DIR}"
-
+        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_CHEAT_DIR}" --editor --headless --quit || ${CMAKE_COMMAND} -E echo "Importation initiale terminee."
         COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_CHEAT_DIR}"
-        WORKING_DIRECTORY "${GODOT_CHEAT_DIR}"
-
         DEPENDS setup GodotPP_Cheat
-        COMMENT "Launching Game (CHEATER)..."
+        COMMENT "Launching Game..."
         USES_TERMINAL
 )
+
 # ==============================================================
 
 # Target: package (Exports the Game)
