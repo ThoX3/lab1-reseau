@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 4.1)
 project(GodotPP LANGUAGES CXX)
 
+find_package(OpenSSL REQUIRED)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# --- Configuration ---
 # On déclare le dossier normal ET le dossier de triche
 set(GODOT_PROJECT_DIR "${CMAKE_SOURCE_DIR}/game")
 set(GODOT_CHEAT_DIR "${CMAKE_SOURCE_DIR}/game_cheat")
