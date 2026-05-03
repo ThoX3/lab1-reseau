@@ -1,5 +1,8 @@
 GodotPP/build/
+GodotPP/game/
+GodotPP/game_cheat/
 
 **/build/
 *.lib
 *.exe
+.vscode
