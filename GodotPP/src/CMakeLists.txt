@@ -1,2 +1,3 @@
-add_subdirectory(godotpp)
+add_subdirectory(openssl)
 add_subdirectory(server)
+add_subdirectory(godotpp)

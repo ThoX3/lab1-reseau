@@ -49,7 +49,12 @@ add_custom_target(editor
 # ==============================================================
 # Target: play (Lance le client SAIN)
 add_custom_target(play
+        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_PROJECT_DIR}" --headless --quit
+        WORKING_DIRECTORY "${GODOT_PROJECT_DIR}"
+
         COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_PROJECT_DIR}"
+        WORKING_DIRECTORY "${GODOT_PROJECT_DIR}"
+
         DEPENDS setup GodotPP
         COMMENT "Launching Game (NORMAL)..."
         USES_TERMINAL
@@ -57,7 +62,12 @@ add_custom_target(play
 
 # Target: cheat (Lance le client HACKER sur le clone)
 add_custom_target(cheat
+        COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_CHEAT_DIR}" --headless --quit
+        WORKING_DIRECTORY "${GODOT_CHEAT_DIR}"
+
         COMMAND ${GODOT_EXECUTABLE} --path "${GODOT_CHEAT_DIR}"
+        WORKING_DIRECTORY "${GODOT_CHEAT_DIR}"
+
         DEPENDS setup GodotPP_Cheat
         COMMENT "Launching Game (CHEATER)..."
         USES_TERMINAL

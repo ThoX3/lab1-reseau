@@ -3,11 +3,11 @@
 #include <string>
 #include <set>
 #include <map>
-#include <algorithm> 
+#include <algorithm>
 #include <cstddef>
 #include <chrono>
 #include "../../protocol.h"
-#include "../../../openssl/include/crypto_utils.h"
+#include "../../openssl/include/crypto_utils.h"
 
 // Clé partagée pour le chiffrement AES
 const uint8_t TEST_SECRET_KEY[32] = {
@@ -35,14 +35,14 @@ struct ServerEntity {
 };
 
 enum class ConnectionState {
-    HANDSHAKING, 
-    CONNECTED    
+    HANDSHAKING,
+    CONNECTED
 };
 
 struct ClientSession {
     ConnectionState state;
     uint8_t shared_aes_key[32];
-    uint32_t net_id; 
+    uint32_t net_id;
 };
 
 std::map<std::string, ClientSession> active_sessions;
@@ -51,7 +51,7 @@ std::map<std::string, ClientSession> active_sessions;
 void send_encrypted_packet(void* socket, const char* address, const uint8_t* data, size_t len) {
     EncryptedPacket secure_pkt;
     secure_pkt.packet_type = 7;
-    
+
     secure_pkt.payload_length = encrypt_data(
         data, len,
         TEST_SECRET_KEY,
@@ -73,7 +73,7 @@ int main() {
     if (!socket) return -1;
 
     uint32_t next_id = 100;
-    
+
     std::set<std::string> clients;
     std::vector<ServerEntity> active_entities;
     std::map<std::string, uint32_t> ip_to_id;
@@ -105,47 +105,47 @@ int main() {
                 // Création du joueur
                 ServerEntity new_ent;
                 new_ent.net_id = next_id++;
-                new_ent.type_id = 1; 
+                new_ent.type_id = 1;
                 new_ent.address = sender_addr;
                 new_ent.x = 100.0f + (active_entities.size() * 150.0f);
                 new_ent.y = 200.0f;
-                
-                active_entities.push_back(new_ent); 
+
+                active_entities.push_back(new_ent);
                 ip_to_id[sender_addr] = new_ent.net_id;
 
                 // Broadcast à tout le monde
                 SpawnPacket p = {1, new_ent.net_id, new_ent.type_id, new_ent.x, new_ent.y};
                 for (const auto& client : clients) {
-                    send_encrypted_packet(socket, client.c_str(), (uint8_t*)&p, sizeof(p));           
+                    send_encrypted_packet(socket, client.c_str(), (uint8_t*)&p, sizeof(p));
                 }
-                
+
                 std::cout << "[Server] Spawned ID " << p.net_id << std::endl;
             }
-            
+
             // =========================================================
             // CAS 2 : DÉCONNEXION (Type 3)
             // =========================================================
             else if (packet_type == 3) {
                 if (ip_to_id.count(sender_addr)) {
                     uint32_t id_to_remove = ip_to_id[sender_addr];
-                    
+
                     std::cout << "[Server] Deconnexion de " << sender_addr << " (ID " << id_to_remove << ")" << std::endl;
 
                     ip_to_id.erase(sender_addr);
                     clients.erase(sender_addr);
 
-                    auto it = std::remove_if(active_entities.begin(), active_entities.end(), 
+                    auto it = std::remove_if(active_entities.begin(), active_entities.end(),
                         [id_to_remove](const ServerEntity& e) { return e.net_id == id_to_remove; });
                     active_entities.erase(it, active_entities.end());
 
                     // Broadcast destruction
                     DestroyPacket p = {2, id_to_remove};
                     for (const auto& client : clients) {
-                        send_encrypted_packet(socket, client.c_str(), (uint8_t*)&p, sizeof(p));            
+                        send_encrypted_packet(socket, client.c_str(), (uint8_t*)&p, sizeof(p));
                     }
                 }
             }
-            
+
             // =========================================================
             // CAS 3 : PAQUET CHIFFRÉ (Mouvements, etc.)
             // =========================================================
@@ -155,7 +155,7 @@ int main() {
 
                 // Sécurité anti-crash
                 if (secure_pkt->payload_length < 0 || secure_pkt->payload_length > 1024) {
-                    continue; 
+                    continue;
                 }
 
                 // Déchiffrement AES
@@ -168,7 +168,7 @@ int main() {
 
                 if (decrypted_len > 0) {
                     uint8_t real_packet_type = decrypted_payload[0];
-                    
+
                     // --- TRAITEMENT DES INPUTS ET ANTI-CHEAT ---
                     if (real_packet_type == 4 && decrypted_len >= (int)sizeof(InputHistoryPacket)) {
                         InputHistoryPacket* pkt = (InputHistoryPacket*)decrypted_payload;
@@ -178,7 +178,7 @@ int main() {
 
                             for (auto& ent : active_entities) {
                                 if (ent.net_id == target_id) {
-                                    
+
                                     // 1. CHRONOMÈTRE
                                     auto now = std::chrono::steady_clock::now();
                                     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - ent.last_reset_time).count();
@@ -187,7 +187,7 @@ int main() {
                                     if (elapsed >= 1) {
                                         ent.inputs_this_second = 0;
                                         ent.last_reset_time = now;
-                                        
+
                                         // Le score de suspicion baisse naturellement avec le temps
                                         if (ent.suspicion_score > 0) ent.suspicion_score -= 10;
                                         if (ent.suspicion_score < 0) ent.suspicion_score = 0;
@@ -204,7 +204,7 @@ int main() {
 
                                     // 3. TRIBUNAL ANTI-CHEAT
                                     if (ent.inputs_this_second > 70) {
-                                        ent.suspicion_score += 20; 
+                                        ent.suspicion_score += 20;
                                         std::cout << "[Anti-Cheat] Abus detecte ! Inputs/sec : " << ent.inputs_this_second << " | Score : " << ent.suspicion_score << "/100" << std::endl;
                                     }
 
@@ -234,7 +234,7 @@ int main() {
                                     // 5. BROADCAST DE LA POSITION
                                     SpawnPacket update = {1, ent.net_id, ent.type_id, ent.x, ent.y};
                                     for (const auto& client : clients) {
-                                        send_encrypted_packet(socket, client.c_str(), (uint8_t*)&update, sizeof(update)); 
+                                        send_encrypted_packet(socket, client.c_str(), (uint8_t*)&update, sizeof(update));
                                     }
                                     break;
                                 }

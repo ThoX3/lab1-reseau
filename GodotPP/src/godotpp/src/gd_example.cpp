@@ -33,7 +33,7 @@ GDExample::~GDExample() {
         DisconnectPacket p;
         p.packet_type = 3;
         net_socket_send(network_socket, "127.0.0.1:12345", (uint8_t*)&p, sizeof(p));
-        
+
         net_socket_destroy(network_socket);
     }
 }
@@ -41,15 +41,15 @@ GDExample::~GDExample() {
 void GDExample::register_entity_types() {
     type_registry[1] = []() -> Node2D* {
         Sprite2D* s = memnew(Sprite2D);
-        
+
         Ref<Texture2D> tex = ResourceLoader::get_singleton()->load("res://icon.svg");
-        
+
         if (tex.is_valid()) {
             s->set_texture(tex);
         } else {
             UtilityFunctions::print("[Client] ERREUR: Impossible de charger icon.svg !");
         }
-        
+
         return s;
     };
 }
@@ -62,7 +62,7 @@ void GDExample::_physics_process(double delta) {
     if (!network_socket) return;
 
     Input* input_singleton = Input::get_singleton();
-    
+
     // 1. Initialisation COMPLÈTE du paquet courant
     InputPacket current_input;
     current_input.sequence = current_sequence++;
@@ -87,18 +87,18 @@ void GDExample::_physics_process(double delta) {
         input_history.history[i] = input_history.history[i - 1];
     }
     input_history.history[0] = current_input;
-    
+
     input_history.packet_type = 4;
 
     // 4. Envoi
     EncryptedPacket secure_pkt;
-    secure_pkt.packet_type = 7; 
+    secure_pkt.packet_type = 7;
 
     secure_pkt.payload_length = encrypt_data(
-        (uint8_t*)&input_history, sizeof(InputHistoryPacket), 
-        TEST_SECRET_KEY, 
-        secure_pkt.nonce, 
-        secure_pkt.payload, 
+        (uint8_t*)&input_history, sizeof(InputHistoryPacket),
+        TEST_SECRET_KEY,
+        secure_pkt.nonce,
+        secure_pkt.payload,
         secure_pkt.tag
     );
 
@@ -111,10 +111,10 @@ void GDExample::_physics_process(double delta) {
 
     uint8_t buf[1024];
     char sender[64];
-    
+
     while (true) {
         int bytes = net_socket_poll(network_socket, buf, 1024, sender, 64);
-        if (bytes <= 0) break; 
+        if (bytes <= 0) break;
 
         uint8_t packet_type = buf[0];
         UtilityFunctions::print("[Client DEBUG] Paquet recu : ", bytes, " octets | Type brut : ", packet_type);
@@ -136,29 +136,29 @@ void GDExample::_physics_process(double delta) {
             if (decrypted_len > 0) {
                 packet_type = decrypted_payload[0];
                 memcpy(buf, decrypted_payload, decrypted_len);
-                bytes = decrypted_len; 
+                bytes = decrypted_len;
                 UtilityFunctions::print("[Client DEBUG] Succes ! Vrai type : ", packet_type, " | Vraie taille : ", bytes);
             } else {
                 UtilityFunctions::print("[Client ERREUR] Signature invalide, hacker detecte !");
-                continue; 
+                continue;
             }
         }
 
         // --- TRAITEMENT DES PAQUETS EN CLAIR ---
         if (packet_type == 1) {
             UtilityFunctions::print("[Client DEBUG] Type 1 detecte. Taille attendue : ", (int)sizeof(SpawnPacket), " | Actuelle : ", bytes);
-            
+
             if (bytes >= (int)sizeof(SpawnPacket)) {
                 SpawnPacket* p = (SpawnPacket*)buf;
                 UtilityFunctions::print("[Client DEBUG] Tentative de spawn pour l'ID : ", p->net_id);
-                
+
                 if (network_to_local.find(p->net_id) == network_to_local.end()) {
                     if (type_registry.count(p->type_id)) {
                         Node2D* new_node = type_registry[p->type_id]();
                         add_child(new_node);
                         new_node->set_position(Vector2(p->x, p->y));
                         new_node->set_name("NetEntity_" + String::num_int64(p->net_id));
-                        
+
                         network_to_local[p->net_id] = new_node;
                         UtilityFunctions::print("[Client] SPAWN TOTALEMENT REUSSI - ID: ", p->net_id);
                     } else {
@@ -173,7 +173,7 @@ void GDExample::_physics_process(double delta) {
                 UtilityFunctions::print("[Client ERREUR] Le paquet est trop petit pour etre un SpawnPacket !");
             }
         }
-        
+
         else if (packet_type == 2 && bytes >= (int)sizeof(DestroyPacket)) {
             DestroyPacket* p = (DestroyPacket*)buf;
             if (network_to_local.count(p->net_id)) {
