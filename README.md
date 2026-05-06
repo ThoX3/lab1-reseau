@@ -19,7 +19,7 @@ The project implements a robust Client-Server architecture, integrating a custom
 lab1-reseau/
 ├── GodotPP/
 │   ├── CMakeLists.txt        # Main build orchestrator
-│   ├── src/                  # C++ source code (Client, Server, Extensions)
+│   ├── src/                  # C++ source code (Client, Server, Cheat)
 │   ├── externals/            # External dependencies (e.g., OpenSSL)
 │   └── game/                 # Clean Godot project (Normal client)
 ├── godot-encrypted/          # Source code for the custom Godot engine (with RSA keys)
