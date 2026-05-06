@@ -30,11 +30,21 @@
 
 #include "file_access_pack.h"
 
+#include "core/crypto/generated_keys.gen.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/io/file_access_patched.h"
 #include "core/object/script_language.h"
 #include "core/os/os.h"
 #include "core/version.h"
+
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
+
+// --- AJOUTE CES LIGNES ICI ---
+uint8_t PackedData::session_aes_key[32] = { 0 };
+bool PackedData::has_session_key = false;
+// -----------------------------
 
 Error PackedData::add_pack(const String &p_path, bool p_replace_files, uint64_t p_offset) {
 	for (int i = 0; i < sources.size(); i++) {
@@ -225,6 +235,67 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 	// Search for the header at the start offset - standalone PCK file.
 	f->seek(p_offset);
 	uint32_t magic = f->get_32();
+
+	// --- DEBUT DE TON CODE CUSTOM ---
+	uint8_t session_aes_key[32];
+	bool is_custom_encrypted = false;
+
+	if (magic == 0x47505031) {
+		uint8_t encrypted_aes_key[256];
+	    f->get_buffer(encrypted_aes_key, 256);
+
+	    BIO* bio = BIO_new_mem_buf(MY_RSA_PRIVATE, -1);
+	    if (!bio) {
+	        ERR_PRINT("GPP1: BIO_new_mem_buf a échoué. MY_RSA_PRIVATE est invalide.");
+	    } else {
+	        EVP_PKEY* priv_key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+	        if (!priv_key) {
+	            ERR_PRINT("GPP1: Impossible de lire la clé privée. Vérifie le formatage PEM (les \\n sont obligatoires).");
+	        } else {
+	            EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(priv_key, nullptr);
+	            if (!ctx) {
+	                ERR_PRINT("GPP1: EVP_PKEY_CTX_new a échoué.");
+	            } else {
+	                if (EVP_PKEY_decrypt_init(ctx) == 1) {
+	                  	EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING);
+						uint8_t decrypted_buf[256]; // OpenSSL exige un buffer de la taille de la clé (256) !
+						size_t outlen = 256;        // On autorise OpenSSL à écrire jusqu'à 256 octets
+						if (EVP_PKEY_decrypt(ctx, decrypted_buf, &outlen, encrypted_aes_key, 256) == 1) {
+						    if (outlen == 32) {
+						        memcpy(session_aes_key, decrypted_buf, 32); // On récupère nos 32 octets propres
+						        is_custom_encrypted = true;
+						    } else {
+						        ERR_PRINT("GPP1: La clé a été déchiffrée, mais la taille finale est incorrecte.");
+						    }
+						} else {
+						    ERR_PRINT("GPP1: Le déchiffrement RSA a échoué ! Les clés ne correspondent pas ou la donnée est corrompue.");
+						}
+	                } else {
+	                    ERR_PRINT("GPP1: EVP_PKEY_decrypt_init a échoué.");
+	                }
+	                EVP_PKEY_CTX_free(ctx);
+	            }
+	            EVP_PKEY_free(priv_key);
+	        }
+	        BIO_free(bio);
+	    }
+
+	    if (is_custom_encrypted) {
+	        memcpy(PackedData::session_aes_key, session_aes_key, 32);
+			PackedData::has_session_key = true;
+			f->seek(p_offset + 260);
+	        magic = f->get_32();
+
+			// Si on a trouvé le vrai header GDPC après notre saut, on valide l'ouverture du pack
+			if (magic == PACK_HEADER_MAGIC) {
+				pck_header_found = true;
+			}
+		} else {
+	        ERR_PRINT("GPP1: Échec critique de sécurité. Le PCK est protégé mais n'a pas pu être déchiffré.");
+		}
+	}
+    // --- FIN DE TON CODE CUSTOM ---
+
 	if (magic == PACK_HEADER_MAGIC) {
 		pck_header_found = true;
 	}
@@ -256,7 +327,6 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 
 	// Search for the header at the end of file - self contained executable.
 	if (!pck_header_found) {
-		// Loading with offset feature not supported for self contained exe files.
 		if (p_offset != 0) {
 			ERR_FAIL_V_MSG(false, "Loading self-contained executable with offset not supported.");
 		}
@@ -271,9 +341,6 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 			f->seek(f->get_position() - ds - 8);
 			magic = f->get_32();
 			if (magic == PACK_HEADER_MAGIC) {
-#ifdef DEBUG_ENABLED
-				print_verbose("PCK header found at the end of executable, loading from offset 0x" + String::num_int64(f->get_position() - 4, 16));
-#endif
 				pck_header_found = true;
 			}
 		}
@@ -281,6 +348,52 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 
 	if (!pck_header_found) {
 		return false;
+	}
+
+	if (!is_custom_encrypted) {
+		int64_t gdpc_pos = f->get_position() - 4;
+		int64_t gpp1_candidate = gdpc_pos - 260; // 4 (magic GPP1) + 256 (clé chiffrée)
+		if (gpp1_candidate >= 0) {
+			int64_t saved_pos = f->get_position(); // on sauvegarde pour revenir après
+
+			f->seek(gpp1_candidate);
+			uint32_t pre_magic = f->get_32();
+
+			if (pre_magic == 0x47505031) {
+				uint8_t encrypted_aes_key[256];
+				f->get_buffer(encrypted_aes_key, 256);
+
+				BIO *bio = BIO_new_mem_buf(MY_RSA_PRIVATE, -1);
+				EVP_PKEY *priv_key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+
+				if (priv_key) {
+					EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(priv_key, nullptr);
+					if (ctx && EVP_PKEY_decrypt_init(ctx) == 1) {
+						EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING);
+						uint8_t aes_buf[256]; // Remplacé par 256
+						size_t outlen = 256;  // Remplacé par 256
+						if (EVP_PKEY_decrypt(ctx, aes_buf, &outlen, encrypted_aes_key, 256) == 1 && outlen == 32) { // On vérifie la taille
+						    memcpy(PackedData::session_aes_key, aes_buf, 32);
+							PackedData::has_session_key = true;
+							is_custom_encrypted = true;
+							// session_aes_key local aussi, utilisé plus bas pour enc_directory
+							memcpy(session_aes_key, aes_buf, 32);
+						} else {
+							ERR_PRINT("GPP1 (embedded): RSA decrypt failed. Wrong private key?");
+						}
+						EVP_PKEY_CTX_free(ctx);
+					}
+					EVP_PKEY_free(priv_key);
+				} else {
+					char err_buf[256];
+					ERR_error_string_n(ERR_get_error(), err_buf, sizeof(err_buf));
+					ERR_PRINT("GPP1 (embedded): Failed to load private key from MY_RSA_PRIVATE.");
+				}
+				BIO_free(bio);
+			}
+
+			f->seek(saved_pos); // retour après le magic GDPC
+		}
 	}
 
 	int64_t pck_start_pos = f->get_position() - 4;
@@ -318,19 +431,22 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 	// Read directory.
 	int file_count = f->get_32();
 	if (enc_directory) {
-		Ref<FileAccessEncrypted> fae;
-		fae.instantiate();
-		ERR_FAIL_COND_V_MSG(fae.is_null(), false, "Can't open encrypted pack directory.");
+	    Ref<FileAccessEncrypted> fae;
+	    fae.instantiate();
+	    ERR_FAIL_COND_V_MSG(fae.is_null(), false, "Can't open encrypted pack directory.");
 
-		Vector<uint8_t> key;
-		key.resize(32);
-		for (int i = 0; i < key.size(); i++) {
-			key.write[i] = script_encryption_key[i];
-		}
+	    Vector<uint8_t> key;
+	    key.resize(32);
+	    // Priorité à la session key RSA si elle est disponible
+	    if (is_custom_encrypted) {
+	        for (int i = 0; i < 32; i++) key.write[i] = session_aes_key[i];
+	    } else {
+	        for (int i = 0; i < 32; i++) key.write[i] = script_encryption_key[i];
+	    }
 
-		Error err = fae->open_and_parse(f, key, FileAccessEncrypted::MODE_READ, false);
-		ERR_FAIL_COND_V_MSG(err, false, "Can't open encrypted pack directory.");
-		f = fae;
+	    Error err = fae->open_and_parse(f, key, FileAccessEncrypted::MODE_READ, false);
+	    ERR_FAIL_COND_V_MSG(err, false, "Can't open encrypted pack directory.");
+	    f = fae;
 	}
 
 	for (int i = 0; i < file_count; i++) {
@@ -530,7 +646,11 @@ FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFil
 		Vector<uint8_t> key;
 		key.resize(32);
 		for (int i = 0; i < key.size(); i++) {
-			key.write[i] = script_encryption_key[i];
+			if (PackedData::has_session_key) {
+				key.write[i] = PackedData::session_aes_key[i];
+			} else {
+				key.write[i] = script_encryption_key[i];
+			}
 		}
 
 		Error err = fae->open_and_parse(f, key, FileAccessEncrypted::MODE_READ, false);
@@ -709,3 +829,5 @@ String DirAccessPack::get_filesystem_type() const {
 DirAccessPack::DirAccessPack() {
 	current = PackedData::get_singleton()->root;
 }
+
+// FORCE REBUILD

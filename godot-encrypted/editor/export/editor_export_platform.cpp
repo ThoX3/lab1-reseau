@@ -34,6 +34,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/crypto/crypto_core.h"
+#include "core/crypto/generated_keys.gen.h"
 #include "core/extension/gdextension.h"
 #include "core/io/delta_encoding.h"
 #include "core/io/dir_access.h"
@@ -59,6 +60,9 @@
 #include "scene/main/node.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/texture.h"
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
 
 class EditorExportSaveProxy {
 	HashSet<String> saved_paths;
@@ -1229,31 +1233,31 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 		}
 
 		// Get encryption key.
-		String script_key = _get_script_encryption_key(p_preset);
 		key.resize(32);
-		if (script_key.length() == 64) {
-			for (int i = 0; i < 32; i++) {
-				int v = 0;
-				if (i * 2 < script_key.length()) {
-					char32_t ct = script_key[i * 2];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct << 4;
-				}
 
-				if (i * 2 + 1 < script_key.length()) {
-					char32_t ct = script_key[i * 2 + 1];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
+		if (PackedData::has_session_key) {
+			for (int i = 0; i < 32; i++) {
+				key.write[i] = PackedData::session_aes_key[i];
+			}
+		} else {
+			String script_key = _get_script_encryption_key(p_preset);
+			if (script_key.length() == 64) {
+				for (int i = 0; i < 32; i++) {
+					int v = 0;
+					if (i * 2 < script_key.length()) {
+						char32_t ct = script_key[i * 2];
+						if (is_digit(ct)) ct = ct - '0';
+						else if (ct >= 'a' && ct <= 'f') ct = 10 + ct - 'a';
+						v |= ct << 4;
 					}
-					v |= ct;
+					if (i * 2 + 1 < script_key.length()) {
+						char32_t ct = script_key[i * 2 + 1];
+						if (is_digit(ct)) ct = ct - '0';
+						else if (ct >= 'a' && ct <= 'f') ct = 10 + ct - 'a';
+						v |= ct;
+					}
+					key.write[i] = v;
 				}
-				key.write[i] = v;
 			}
 		}
 	}
@@ -2107,6 +2111,56 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 		}
 	}
 
+	// --- LOGIQUE DE CHIFFREMENT DYNAMIQUE ---
+	{
+		uint8_t aes_key[32];
+		OS::get_singleton()->get_entropy(aes_key, 32);
+
+		uint8_t encrypted_aes[256];
+		size_t encrypted_len = 256;
+
+		BIO *bio = BIO_new_mem_buf(MY_RSA_PUBLIC, -1);
+		ERR_FAIL_COND_V_MSG(bio == nullptr, ERR_CANT_CREATE, "GPP1: BIO_new_mem_buf failed. MY_RSA_PUBLIC is invalid.");
+
+		EVP_PKEY *pub_key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
+		BIO_free(bio);
+		ERR_FAIL_COND_V_MSG(pub_key == nullptr, ERR_CANT_CREATE, "GPP1: Failed to parse RSA public key from MY_RSA_PUBLIC.");
+
+		EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pub_key, nullptr);
+		ERR_FAIL_COND_V_MSG(ctx == nullptr, ERR_CANT_CREATE, "GPP1: EVP_PKEY_CTX_new failed.");
+
+		bool gpp1_ok = false;
+		if (EVP_PKEY_encrypt_init(ctx) == 1) {
+			EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING);
+			if (EVP_PKEY_encrypt(ctx, encrypted_aes, &encrypted_len, aes_key, 32) == 1) {
+				ERR_FAIL_COND_V_MSG(encrypted_len != 256, ERR_BUG,
+						vformat("GPP1: Unexpected RSA ciphertext length: %d (expected 256). Use a 2048-bit RSA key.", encrypted_len));
+
+				f->store_32(0x47505031);
+				f->store_buffer(encrypted_aes, 256);
+				memcpy(PackedData::session_aes_key, aes_key, 32);
+				PackedData::has_session_key = true;
+				gpp1_ok = true;
+			} else {
+				ERR_PRINT("GPP1: EVP_PKEY_encrypt failed — " + String(ERR_error_string(ERR_get_error(), nullptr)));
+			}
+		} else {
+			ERR_PRINT("GPP1: EVP_PKEY_encrypt_init failed.");
+		}
+
+		EVP_PKEY_CTX_free(ctx);
+		EVP_PKEY_free(pub_key);
+
+		if (!gpp1_ok) {
+			// Le PCK sera écrit sans en-tête GPP1 : l'export échoue proprement
+			// plutôt que de produire un PCK illisible par le template.
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"),
+					TTR("GPP1: RSA encryption of session AES key failed. Check MY_RSA_PUBLIC."));
+			return ERR_CANT_CREATE;
+		}
+	}
+    // ------------------------------
+
 	int64_t pck_start_pos = f->get_position();
 	uint64_t file_base_ofs = 0;
 	uint64_t dir_base_ofs = 0;
@@ -2158,31 +2212,30 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 
 	Vector<uint8_t> key;
 	if (p_preset->get_enc_pck() && p_preset->get_enc_directory()) {
-		String script_key = _get_script_encryption_key(p_preset);
 		key.resize(32);
-		if (script_key.length() == 64) {
+		if (PackedData::has_session_key) {
 			for (int i = 0; i < 32; i++) {
-				int v = 0;
-				if (i * 2 < script_key.length()) {
-					char32_t ct = script_key[i * 2];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
+				key.write[i] = PackedData::session_aes_key[i];
+			}
+		} else {
+			String script_key = _get_script_encryption_key(p_preset);
+			if (script_key.length() == 64) {
+				for (int i = 0; i < 32; i++) {
+					int v = 0;
+					if (i * 2 < script_key.length()) {
+						char32_t ct = script_key[i * 2];
+						if (is_digit(ct)) ct = ct - '0';
+						else if (ct >= 'a' && ct <= 'f') ct = 10 + ct - 'a';
+						v |= ct << 4;
 					}
-					v |= ct << 4;
-				}
-
-				if (i * 2 + 1 < script_key.length()) {
-					char32_t ct = script_key[i * 2 + 1];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
+					if (i * 2 + 1 < script_key.length()) {
+						char32_t ct = script_key[i * 2 + 1];
+						if (is_digit(ct)) ct = ct - '0';
+						else if (ct >= 'a' && ct <= 'f') ct = 10 + ct - 'a';
+						v |= ct;
 					}
-					v |= ct;
+					key.write[i] = v;
 				}
-				key.write[i] = v;
 			}
 		}
 	}
@@ -2606,3 +2659,5 @@ void EditorExportPlatform::_bind_methods() {
 	BIND_BITFIELD_FLAG(DEBUG_FLAG_VIEW_COLLISIONS);
 	BIND_BITFIELD_FLAG(DEBUG_FLAG_VIEW_NAVIGATION);
 }
+
+// FORCE REBUILD

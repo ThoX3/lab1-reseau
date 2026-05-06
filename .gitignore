@@ -1,7 +1,9 @@
 GodotPP/build/
-GodotPP/game/
+
+godot_encrypted/bin
 
 .vscode
+.godot_bin
 
 **/build/
 *.lib

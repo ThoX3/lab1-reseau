@@ -118,6 +118,10 @@ private:
 	void _get_file_paths(PackedDir *p_dir, const String &p_parent_dir, HashSet<String> &r_paths) const;
 
 public:
+	// --- AJOUT DES VARIABLES DE SESSION POUR LE CHIFFREMENT RSA/AES ---
+	static uint8_t session_aes_key[32];
+	static bool has_session_key;
+    // -----------------------------------------------------------------
 	void add_pack_source(PackSource *p_source);
 	void add_path(const String &p_pkg_path, const String &p_path, uint64_t p_ofs, uint64_t p_size, const uint8_t *p_md5, PackSource *p_src, bool p_replace_files, bool p_encrypted = false, bool p_bundle = false, bool p_delta = false); // for PackSource
 	void remove_path(const String &p_path);

@@ -19,7 +19,7 @@ Clone the repository (including submodules) and run the setup to download the Go
 # Configure the project
 ```bash
 cmake -S . -B build `
-  "-DCMAKE_TOOLCHAIN_FILE=D:/lab1-reseau/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+  "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_MANIFEST_MODE=ON `
   -DVCPKG_TARGET_TRIPLET=x64-windows
 ```
@@ -36,7 +36,7 @@ The build system handles the Rust compilation, header generation via cbindgen, a
 - Launch Godot Editor: `cmake --build build --target editor`
 - Run the Game: `cmake --build build --target play`
 - Run the Cheat: `cmake --build build --target cheat`
-- Run the Server: `cmake --build build --target GodotPPServer`
+- Run the Server: `cmake --build build --target server`
 
 
 ## 🛠 Project Architecture

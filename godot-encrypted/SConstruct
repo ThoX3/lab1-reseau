@@ -12,6 +12,8 @@ import sys
 from collections import OrderedDict
 from importlib.util import module_from_spec, spec_from_file_location
 from types import ModuleType
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
 
 from SCons import __version__ as scons_raw_version
 from SCons.Builder import ListEmitter
@@ -364,6 +366,14 @@ opts.Update(env)
 # Setup caching logic early to catch everything.
 methods.prepare_cache(env)
 
+print(">>> SCONS LIT BIEN LE FICHIER SCONSTRUCT")
+
+# On vérifie si SCons voit l'argument que tu passes en console
+if "module_openssl_enabled" in ARGUMENTS:
+    print(f">>> ARGUMENT DETECTE : {ARGUMENTS['module_openssl_enabled']}")
+else:
+    print(">>> ERREUR : L'ARGUMENT module_openssl_enabled EST ABSENT !")
+
 # Copy custom environment variables if set.
 if env["import_env_vars"]:
     for env_var in str(env["import_env_vars"]).split(","):
@@ -506,6 +516,21 @@ except AttributeError:
     pass
 for tool in custom_tools:
     env.Tool(tool)
+
+# Configuration OpenSSL
+if ARGUMENTS.get("module_openssl_enabled") == "yes":
+    if env["platform"] == "windows":
+        VCPKG_REL_ROOT = "#/../GodotPP/build/vcpkg_installed/x64-windows"
+        lib_path = Dir(VCPKG_REL_ROOT + "/lib").abspath
+        include_path = Dir(VCPKG_REL_ROOT + "/include").abspath
+        print(f">>> CONFIGURATION OPENSSL : {include_path}")
+        env.AppendUnique(CPPPATH=[include_path])
+        env.Append(LINKFLAGS=[
+            lib_path + "/libssl.lib",
+            lib_path + "/libcrypto.lib"
+        ])
+    else:
+        env.AppendUnique(LIBS=["crypto", "ssl"])
 
 
 # Add default include paths.
@@ -1233,3 +1258,32 @@ if not env.GetOption("clean") and not env.GetOption("help"):
     methods.show_progress(env)
     methods.prepare_purge(env)
     methods.prepare_timer()
+
+def generate_crypto_headers():
+    header_path = "core/crypto/generated_keys.gen.h"
+    if not os.path.exists(header_path):
+        # Génération RSA 2048 via cryptography (utilisé par SCons)
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+        priv_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        pub_pem = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
+        # On pré-calcule les chaînes pour éviter les antislashs dans les f-strings
+        # Cela transforme les retours à la ligne réels en la chaîne "\n" pour le C++
+        pub_str = pub_pem.decode().replace("\n", "\\n")
+        priv_str = priv_pem.decode().replace("\n", "\\n")
+
+        with open(header_path, "w") as f:
+            f.write("#ifndef GENERATED_KEYS_H\n#define GENERATED_KEYS_H\n")
+            f.write(f'static const char* MY_RSA_PUBLIC = "{pub_str}";\n')
+            f.write(f'static const char* MY_RSA_PRIVATE = "{priv_str}";\n')
+            f.write("#endif")
+
+generate_crypto_headers()
