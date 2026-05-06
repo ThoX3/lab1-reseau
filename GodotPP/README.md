@@ -16,17 +16,12 @@ This project features a "Superbuild" workflow designed for education, allowing s
 ### Initial Setup
 Clone the repository (including submodules) and run the setup to download the Godot Engine binary:
 
-# Configure the project
+# Configure the project and build custom targets for the editor, game, cheat, and server. The CMake configuration will automatically fetch and build the `GodotPP` bindings and the SNL Rust library.
 ```bash
 cmake -S . -B build `
   "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake" `
   -DVCPKG_MANIFEST_MODE=ON `
   -DVCPKG_TARGET_TRIPLET=x64-windows
-```
-
-# Download the Godot Engine binary
-```bash
-cmake --build build --target setup
 ```
 
 ### Development Workflow
@@ -37,7 +32,6 @@ The build system handles the Rust compilation, header generation via cbindgen, a
 - Run the Game: `cmake --build build --target play`
 - Run the Cheat: `cmake --build build --target cheat`
 - Run the Server: `cmake --build build --target server`
-
 
 ## 🛠 Project Architecture
 
