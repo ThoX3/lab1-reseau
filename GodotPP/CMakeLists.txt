@@ -90,15 +90,12 @@ add_custom_target(server
 add_custom_target(package
         COMMAND ${CMAKE_COMMAND} -E make_directory "${EXPORT_DIR}/bin/windows"
 
-        # On copie l'exécutable Template (qui est maintenant dans .godot_bin)
         COMMAND ${CMAKE_COMMAND} -E copy "${GODOT_TEMPLATE_EXE}" "${EXPORT_DIR}/GodotPP.exe"
 
         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:GodotPP>" "${EXPORT_DIR}/bin/windows/GodotPP.dll"
 
-        # On exporte le .pck
         COMMAND ${GODOT_EDITOR_EXE} --headless --path "${GODOT_PROJECT_DIR}" --export-pack "Windows Desktop" "${EXPORT_DIR}/GodotPP.pck"
 
-        # L'export exige que le Template ET l'Éditeur soient compilés
         DEPENDS build_engine_editor build_engine_template GodotPP
         COMMENT "Assemblage et Exportation du jeu terminés dans ${EXPORT_DIR} !"
 )
