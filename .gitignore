@@ -9,3 +9,4 @@ godot_encrypted/bin
 *.lib
 *.exe
 *.dll
+*/generated_keys.gen.h
