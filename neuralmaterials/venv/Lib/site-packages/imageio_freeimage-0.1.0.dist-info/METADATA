@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: imageio-freeimage
+Version: 0.1.0
+Summary: A plugin for ImageIO that wraps the FreeImage library
+License: FreeImage Open Source Dual-License
+Author: ImageIO collaborators
+Requires-Python: >=3.7
+Classifier: License :: Other/Proprietary License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Requires-Dist: imageio (>=2.19.3,<3.0.0)
