@@ -1,15 +1,15 @@
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
-// Tes 4 textures d'entrée (sans aucun lissage)
-uniform sampler2D feature_tex_0 : filter_nearest;
-uniform sampler2D feature_tex_1 : filter_nearest;
-uniform sampler2D feature_tex_2 : filter_nearest;
-uniform sampler2D feature_tex_3 : filter_nearest;
+// 4 textures d'entrée
+uniform sampler2D feature_tex_0 : filter_linear;
+uniform sampler2D feature_tex_1 : filter_linear;
+uniform sampler2D feature_tex_2 : filter_linear;
+uniform sampler2D feature_tex_3 : filter_linear;
 
 // Les valeurs extrêmes exactes trouvées par ton réseau PyTorch
-const float FEATURE_MIN = -10.430896; 
-const float FEATURE_MAX = 13.347617;
+const float FEATURE_MIN = -5.142467;
+const float FEATURE_MAX = 6.809052;
 
 // Les poids du MLP (à remplir dynamiquement via ton code C++)
 // Couche 1 : 12 entrées * 16 sorties = 192 poids, 16 biais

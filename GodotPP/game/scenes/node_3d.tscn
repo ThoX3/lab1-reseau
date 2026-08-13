@@ -1,14 +1,23 @@
 [gd_scene format=3 uid="uid://vkv5gmpu1ssy"]
 
-[ext_resource type="Material" uid="uid://qapy6x2v1ljp" path="res://neuralmaterials/new_neural_material.tres" id="1_tyffc"]
+[ext_resource type="Material" uid="uid://dw3lkvbjaik10" path="res://neuralmaterials/brick/neural_brick.tres" id="1_a6664"]
 [ext_resource type="Script" uid="uid://0scnrqolsrev" path="res://scenes/mesh_instance_3d.gd" id="2_ns6u7"]
 
-[sub_resource type="SphereMesh" id="SphereMesh_20vo2"]
+[sub_resource type="BoxMesh" id="BoxMesh_ns6u7"]
 
 [node name="Node3D" type="Node3D" unique_id=510948915]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1148617265]
 transform = Transform3D(0.99918795, 0.03152294, -0.025095198, -0.031532872, 0.9995027, 0, 0.025082719, 0.00079132366, 0.99968505, -0.0042707324, -2.9802322e-08, 0.0031485558)
-mesh = SubResource("SphereMesh_20vo2")
-surface_material_override/0 = ExtResource("1_tyffc")
+mesh = SubResource("BoxMesh_ns6u7")
+surface_material_override/0 = ExtResource("1_a6664")
 script = ExtResource("2_ns6u7")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=2066305813]
+transform = Transform3D(0.016318083, 0, 0.9998669, 0, 1, 0, -0.9998669, 0, 0.016318083, 1.6777434, 0, 0.71690583)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1485686198]
+transform = Transform3D(1, 0, 0, 0, -0.041980248, 0.99911845, 0, -0.99911845, -0.041980248, 0, 0.97127664, 0.7486653)
+
+[node name="DirectionalLight3D2" type="DirectionalLight3D" parent="." unique_id=833751098]
+transform = Transform3D(0.035649568, -0.041953564, 0.99848336, -0.9993644, -0.0014965778, 0.03561814, 0, -0.99911845, -0.041980248, 2.0072904, -0.24667287, 0.7486653)

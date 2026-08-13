@@ -1,13 +1,25 @@
-@tool
 extends MeshInstance3D
 
-func _ready():
-	var mat = get_surface_override_material(0)
+func _ready() -> void:
+	var file_path = "res://neuralmaterials/brick/mlp_weights.json"
+	var file = FileAccess.open(file_path, FileAccess.READ)
 	
-	if mat and mat.has_method("load_weights_from_json"):
-		# 1. On corrige le chemin vers ton vrai dossier
-		var json_path = "res://neuralmaterials/brick/mlp_weights.json"
+	if file:
+		var json = JSON.new()
+		var error = json.parse(file.get_as_text())
 		
-		print("Chargement des poids du MLP dans l'éditeur...")
-		mat.load_weights_from_json(json_path)
-		print("Chargement terminé ! Le shader a reçu les poids.")
+		if error == OK:
+			var weights_dict = json.data
+			var mat = get_surface_override_material(0) as ShaderMaterial
+			
+			if mat:
+				mat.set_shader_parameter("l1_weights", weights_dict["net.0.weight"])
+				mat.set_shader_parameter("l1_bias", weights_dict["net.0.bias"])
+				mat.set_shader_parameter("l2_weights", weights_dict["net.2.weight"])
+				mat.set_shader_parameter("l2_bias", weights_dict["net.2.bias"])
+				
+				print("[+] Poids du MLP injectés avec succès dans le GPU au Runtime !")
+		else:
+			push_error("Impossible de parser le JSON des poids.")
+	else:
+		push_error("Fichier mlp_weights.json introuvable au chemin : " + file_path)

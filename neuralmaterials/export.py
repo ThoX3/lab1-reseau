@@ -6,7 +6,7 @@ import json
 
 from model_bcf import BlockCompressedFeatures, MaterialDecoder
 
-RESOLUTION = 512
+RESOLUTION = 2048
 
 def main():
     print("[+] Début de l'exportation des ressources...")

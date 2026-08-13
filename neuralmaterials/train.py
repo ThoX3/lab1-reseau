@@ -10,7 +10,7 @@ from model_bcf import MaterialDecoder, BlockCompressedFeatures
 EPOCHS = 5000
 LEARNING_RATE_FEATURES = 0.05
 LEARNING_RATE_MLP = 0.001
-RESOLUTION = 512
+RESOLUTION = 2048
 
 def load_texture(path):
     if not os.path.exists(path):
