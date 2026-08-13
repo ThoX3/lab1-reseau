@@ -17,6 +17,8 @@ private:
     Vector<float> l2_weights;
     Vector<float> l2_bias;
 
+    void _update_shader_uniforms();
+
 protected:
     static void _bind_methods();
 

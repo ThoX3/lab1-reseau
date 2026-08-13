@@ -8,6 +8,20 @@ NeuralMaterial::NeuralMaterial() {
 NeuralMaterial::~NeuralMaterial() {
 }
 
+void NeuralMaterial::_update_shader_uniforms() {
+    set_shader_parameter("feature_tex_0", features_textures[0]);
+    set_shader_parameter("feature_tex_1", features_textures[1]);
+    set_shader_parameter("feature_tex_2", features_textures[2]);
+    set_shader_parameter("feature_tex_3", features_textures[3]);
+
+    if (l1_weights.size() > 0) {
+        set_shader_parameter("l1_weights", l1_weights);
+        set_shader_parameter("l1_bias", l1_bias);
+        set_shader_parameter("l2_weights", l2_weights);
+        set_shader_parameter("l2_bias", l2_bias);
+    }
+}
+
 void NeuralMaterial::load_weights_from_json(const String &p_path) {
     Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
     ERR_FAIL_COND_MSG(file.is_null(), "Impossible d'ouvrir le fichier de poids MLP : " + p_path);
@@ -47,11 +61,14 @@ void NeuralMaterial::load_weights_from_json(const String &p_path) {
             l2_bias.write[i] = (float)l2_b[i];
         }
     }
+
+    _update_shader_uniforms();
 }
 
 void NeuralMaterial::set_feature_texture(int p_index, const Ref<Texture2D> &p_texture) {
-    ERR_FAIL_INDEX(p_index, 4);
+	ERR_FAIL_INDEX(p_index, 4);
     features_textures[p_index] = p_texture;
+    _update_shader_uniforms();
     emit_changed();
 }
 

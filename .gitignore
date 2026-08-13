@@ -10,3 +10,5 @@ godot_encrypted/bin
 *.exe
 *.dll
 */generated_keys.gen.h
+
+.cache
