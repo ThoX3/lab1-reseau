@@ -1,0 +1,12 @@
+Import("env")
+import os
+
+env.Append(CPPPATH=[Dir('#')])
+
+sources = [
+    "neural_material.cpp",
+    "register_types.cpp"
+]
+
+lib = env.add_library("neural_materials", sources)
+env.Prepend(LIBS=[lib])
