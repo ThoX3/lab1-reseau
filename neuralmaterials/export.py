@@ -8,12 +8,13 @@ from model_bcf import BlockCompressedFeatures, MaterialDecoder
 
 RESOLUTION = 2048
 
-def main():
-    print("[+] Début de l'exportation des ressources...")
-    export_dir = "./build/export"
+# Transformation de main() en une fonction paramétrable
+def run_export(model_path, export_dir):
+    print(f"[+] Début de l'exportation des ressources dans {export_dir}...")
     os.makedirs(export_dir, exist_ok=True)
 
-    checkpoint = torch.load("./build/model_final.pt", map_location="cpu", weights_only=True)
+    # On utilise maintenant la variable model_path envoyée par la boucle
+    checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
 
     print("[+] Extraction des Neural Features...")
     features = BlockCompressedFeatures(width=RESOLUTION, height=RESOLUTION, feature_dim=12)
@@ -21,8 +22,7 @@ def main():
 
     latent_image = features().detach().numpy().astype(np.float32)
 
-    # --- LA SOLUTION EST ICI : NORMALISATION ---
-    # On trouve les valeurs extrêmes générées par PyTorch
+    # --- NORMALISATION ---
     min_val = float(np.min(latent_image))
     max_val = float(np.max(latent_image))
 
@@ -32,18 +32,17 @@ def main():
     print(f"const float FEATURE_MAX = {max_val:.6f};")
     print("="*60 + "\n")
 
-    # Compression mathématique de toutes les valeurs entre 0.0 et 1.0
     latent_norm = (latent_image - min_val) / (max_val - min_val)
 
     for i in range(4):
         tex_data = latent_norm[:, :, i*3:(i+1)*3]
         tex_data_bgr = cv2.cvtColor(tex_data, cv2.COLOR_RGB2BGR)
-        # Plus de clamp destructeur, le tenseur est garanti positif !
+        # On utilise la variable export_dir envoyée par la boucle
         cv2.imwrite(f"{export_dir}/neural_feature_{i}.hdr", tex_data_bgr)
 
     print(f"[+] 4 Textures HDR exportées avec succès.")
 
-    # 2. Extraction des Poids du MLP
+    # Extraction des Poids du MLP
     decoder = MaterialDecoder(in_channels=12, hidden_dim=16, out_channels=9)
     decoder.load_state_dict(checkpoint['decoder_state'])
 
@@ -54,7 +53,8 @@ def main():
     with open(f"{export_dir}/mlp_weights.json", "w") as f:
         json.dump(weights_dict, f, indent=4)
 
-    print(f"[+] Poids du MLP exportés dans {export_dir}/mlp_weights.json")
+    print(f"[+] Poids du MLP exportés dans {export_dir}/mlp_weights.json\n")
 
+# Si on lance le script tout seul, on fait un test par défaut
 if __name__ == "__main__":
-    main()
+    run_export("./build/model_final.pt", "./build/export")
