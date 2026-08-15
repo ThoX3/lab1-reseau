@@ -6,6 +6,7 @@ godot_encrypted/bin
 .godot_bin
 
 **/build/
+!/neuralmaterials/build/
 *.lib
 *.exe
 *.dll
