@@ -12,3 +12,5 @@ godot_encrypted/bin
 */generated_keys.gen.h
 
 .cache
+
+neuralmaterials/venv/
