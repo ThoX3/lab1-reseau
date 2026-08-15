@@ -1,7 +1,7 @@
-# 🌐 Network Lab - GodotPP (C++ & Security)
+# 🌐 GodotPP - Secure Multiplayer & Neural Rendering Lab (C++ / AI)
 
-This repository contains the source code for a multiplayer networking lab developed with the **Godot** engine and **C++**. 
-The project implements a robust Client-Server architecture, integrating a custom-compiled Godot engine, a cryptographic security system (RSA/AES) to protect game files and communications, and a cutting-edge AI-driven graphics rendering pipeline.
+This repository contains the source code for an advanced R&D lab combining secure multiplayer networking and AI-driven graphics, developed with the **Godot** engine, **C++**, and **PyTorch**. 
+The project implements a robust Client-Server architecture, integrating a custom-compiled Godot engine, a cryptographic security system (RSA/AES) to protect game files and communications, and a cutting-edge Neural Materials rendering pipeline.
 
 ## ✨ Main Features
 
@@ -10,7 +10,7 @@ The project implements a robust Client-Server architecture, integrating a custom
 *   **"Cheat" Test Client:** A parallel environment (`game_cheat`) allowing testing of network vulnerabilities and server protections; available after building the project.
 *   **Encrypted Network Traffic:** All data packets sent between the client and the server are **encrypted using OpenSSL**, ensuring secure communication and preventing packet sniffing or man-in-the-middle attacks.
 *   **Custom Engine & Encryption:** Use of a modified version of the Godot engine (`godot-encrypted`) capable of compiling `.pck` files and building clients that can encrypt/decrypt assets on the fly.
-*   🧠 **Neural Materials (AI Texture Compression):** A custom R&D graphics pipeline replacing heavy 4K PBR textures with a Multi-Layer Perceptron (MLP). Trained via PyTorch, the network weights are injected at runtime into a custom GLSL fragment shader, rendering materials in real-time. This trades a negligible Compute cost for a massive Memory Bandwidth optimization, reducing VRAM usage.
+*   **Neural Materials (AI Texture Compression):** A custom R&D graphics pipeline replacing heavy 4K PBR textures with a Multi-Layer Perceptron (MLP). Trained via PyTorch, the network weights are injected at runtime into a custom GLSL fragment shader, rendering materials in real-time. This trades a negligible Compute cost for a massive Memory Bandwidth optimization, reducing VRAM usage.
 *   **Automated CMake Pipeline:** A comprehensive build script managing the C++ code compilation, engine assembly, exportation, and final Python encryption.
 
 ---
