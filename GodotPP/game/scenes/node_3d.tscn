@@ -1,21 +1,18 @@
 [gd_scene format=3 uid="uid://vkv5gmpu1ssy"]
 
-[ext_resource type="Material" uid="uid://dw3lkvbjaik10" path="res://neuralmaterials/brick/neural_brick.tres" id="1_a6664"]
+[ext_resource type="Texture2D" uid="uid://bf6xiy2ig0gj4" path="res://data/brick/square_floor/square_brick_floor_diff_4k.jpg" id="1_oqwcg"]
+[ext_resource type="Material" uid="uid://cg3m1aipept6b" path="res://neuralmaterials/brick/redbrick/export/neural_brick_redbrick.tres" id="2_5t4e2"]
+[ext_resource type="Texture2D" uid="uid://dvu5uii04a1xy" path="res://data/brick/square_floor/square_brick_floor_disp_4k.png" id="2_a6664"]
 [ext_resource type="Script" uid="uid://0scnrqolsrev" path="res://scenes/mesh_instance_3d.gd" id="2_ns6u7"]
-[ext_resource type="Texture2D" uid="uid://ba080endwuwll" path="res://textures/brick/square_brick_floor_diff_4k.jpg" id="3_a6664"]
-[ext_resource type="Texture2D" uid="uid://cbfmixn06xcws" path="res://textures/brick/square_brick_floor_disp_4k.png" id="4_10v3s"]
-[ext_resource type="Texture2D" uid="uid://c7ncignlqivw3" path="res://textures/brick/square_brick_floor_nor_gl_4k.png" id="5_cptob"]
-[ext_resource type="Texture2D" uid="uid://cn0valx4hpnnf" path="res://textures/brick/square_brick_floor_rough_4k.png" id="6_b2yaj"]
+[ext_resource type="Material" uid="uid://dw3lkvbjaik10" path="res://neuralmaterials/brick/square_floor/export/neural_brick_squarefloor.tres" id="3_5t4e2"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_ns6u7"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q712h"]
-albedo_texture = ExtResource("3_a6664")
-roughness_texture = ExtResource("6_b2yaj")
+albedo_texture = ExtResource("1_oqwcg")
 normal_enabled = true
-normal_texture = ExtResource("5_cptob")
 heightmap_enabled = true
-heightmap_texture = ExtResource("4_10v3s")
+heightmap_texture = ExtResource("2_a6664")
 
 [node name="Node3D" type="Node3D" unique_id=510948915]
 
@@ -36,6 +33,7 @@ script = ExtResource("2_ns6u7")
 
 [node name="NeuralMesh" type="MeshInstance3D" parent="." unique_id=1148617265]
 transform = Transform3D(0.99918795, 0.03152294, -0.025095198, -0.031532872, 0.9995027, 0, 0.025082719, 0.00079132366, 0.99968505, -0.0042707324, -2.9802322e-08, 0.0031485558)
+material_override = ExtResource("2_5t4e2")
 mesh = SubResource("BoxMesh_ns6u7")
-surface_material_override/0 = ExtResource("1_a6664")
+surface_material_override/0 = ExtResource("3_5t4e2")
 script = ExtResource("2_ns6u7")

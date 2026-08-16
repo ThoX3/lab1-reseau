@@ -1,7 +1,7 @@
 extends MeshInstance3D
 
 func _ready() -> void:
-	var file_path = "res://neuralmaterials/brick/mlp_weights.json"
+	var file_path = "res://neuralmaterials/brick/square_floor/export/mlp_weights.json"
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	
 	if file:
